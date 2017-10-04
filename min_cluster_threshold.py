@@ -1,7 +1,8 @@
 from Bio import Phylo
 from cStringIO import StringIO
     
-#outputs number of clusters, and the longest path to any leaf.
+# outputs number of clusters, and the longest path to any leaf connected to the
+# root.
 def cluster(tree, threshold):
     return recurse_cluster(tree.clade, threshold)
 
