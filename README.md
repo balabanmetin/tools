@@ -1,5 +1,4 @@
 # tools
-Sorts of tools
 Various tools
-tools
 
+`make_nonnegative.sh` : Replace negative branch lengths with zero
