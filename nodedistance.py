@@ -56,16 +56,27 @@ mrca2 = tree2.mrca(mrca_list)
 
 dist_to_mrca1 = 0
 for p in q_t1.traverse_ancestors(include_self=False):
-    if p == mrca1:
+    if p == tree1.root:
         break
     dist_to_mrca1 += p.edge_length
 
+dist_from_mrca1_to_root=0
+for p in mrca1.traverse_ancestors(include_self=True):
+    if p == tree1.root:
+        break
+    dist_from_mrca1_to_root += p.edge_length
+
 dist_to_mrca2 = 0
 for p in q_t2.traverse_ancestors(include_self=False):
-    if p == mrca2:
+    if p == tree2.root:
         break
     dist_to_mrca2 += p.edge_length
 
-print(abs(dist_to_mrca2 - dist_to_mrca1) + q_t1.edge_length + q_t2.edge_length)
+dist_from_mrca2_to_root=0
+for p in mrca2.traverse_ancestors(include_self=True):
+    if p == tree2.root:
+        break
+    dist_from_mrca2_to_root += p.edge_length
+print(dist_to_mrca2 + dist_to_mrca1 - 2*dist_from_mrca1_to_root)
 
 
