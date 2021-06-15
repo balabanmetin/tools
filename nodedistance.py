@@ -13,6 +13,8 @@ delta = 10**-5
 # (this don't work if the query is on the same edge in both trees)
 
 
+# find a leaf with positive branch length.
+# locate it in both trees
 for i in tree1.traverse_postorder(internal=False):
     if i.label != species and i.edge_length > 0:
         rootat1 = i
@@ -24,16 +26,17 @@ for j in tree2.traverse_postorder(internal=False):
         break
 
 assert rootat1.edge_length-rootat2.edge_length < delta
+
+# root both trees at the midpoint of the terminal
+# edge
 tree1.reroot(rootat1, rootat1.edge_length/2)
 tree2.reroot(rootat2, rootat2.edge_length/2)
 
+# always suppress unifurcations when rooting with treeswift
 tree1.suppress_unifurcations()
 tree2.suppress_unifurcations()
 
-# tree1.order(mode="label")
-# tree2.order(mode="label")
-
-
+# find query species in both trees
 for i in tree1.traverse_postorder(internal=False):
     if i.label == species:
         q_t1 = i
@@ -44,39 +47,36 @@ for j in tree2.traverse_postorder(internal=False):
         q_t2 = j
         break
 
-mrca_list = set()
-for n in [q_t1,q_t2]:
-    sib = [k for k in n.parent.children if k != n][0]
-    mrca_list.add(next(sib.traverse_postorder(internal=False)).label)
-    psib = [k for k in n.parent.parent.children if k != n.parent][0]
-    mrca_list.add(next(psib.traverse_postorder(internal=False)).label)
-
-mrca1 = tree1.mrca(mrca_list)
+# locate the sibling of query in tree1. it's described by
+# two leaves under it, one from each side. if the sibling is leaf
+# then simply find the label in the second tree. mrca() function
+# works for both cases.
+sib = [k for k in q_t1.parent.children if k != q_t1][0]
+if sib.is_leaf():
+    mrca_list = [sib.label]
+else:
+    mrca_list = [next(i.traverse_postorder(internal=False)).label for i in sib.children]
 mrca2 = tree2.mrca(mrca_list)
 
-dist_to_mrca1 = 0
-for p in q_t1.traverse_ancestors(include_self=False):
-    if p == tree1.root:
-        break
-    dist_to_mrca1 += p.edge_length
-
-dist_from_mrca1_to_root=0
-for p in mrca1.traverse_ancestors(include_self=True):
-    if p == tree1.root:
-        break
-    dist_from_mrca1_to_root += p.edge_length
-
-dist_to_mrca2 = 0
-for p in q_t2.traverse_ancestors(include_self=False):
-    if p == tree2.root:
-        break
-    dist_to_mrca2 += p.edge_length
-
-dist_from_mrca2_to_root=0
-for p in mrca2.traverse_ancestors(include_self=True):
-    if p == tree2.root:
-        break
-    dist_from_mrca2_to_root += p.edge_length
-print(dist_to_mrca2 + dist_to_mrca1 - 2*dist_from_mrca1_to_root)
-
-
+# the case where the edge is not split by query in tree2
+# or the query is placed closer to root:
+if mrca2.edge_length > sib.edge_length:
+    tree2.reroot(mrca2, sib.edge_length)
+    tree2.suppress_unifurcations()
+    tot = 0
+    for i in q_t2.traverse_ancestors(include_self=False):
+        if i.is_root():
+            break
+        else:
+            tot += i.edge_length
+    print(tot)
+# edge is broken at the exact same spot
+# (this should rarely happen in leave one out)
+elif mrca2.edge_length == sib.edge_length:
+    print(0)
+# query is placed on the same edge in tree2 but farther away from
+# the root. in this case, we reroot at the parent of mrca2. we don't
+# really need to reroot though. we can simply compute the difference
+else:
+    delta = sib.edge_length - mrca2.edge_length
+    print(delta)
