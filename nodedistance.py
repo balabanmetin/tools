@@ -6,7 +6,7 @@ import sys
 tree1 = ts.read_tree_newick(sys.argv[1])
 tree2 = ts.read_tree_newick(sys.argv[2])
 species = sys.argv[3]
-delta = 10**-5
+delta = 10 ** -5
 # third parameter can be removed. order tree by labels.
 # then traverse post order. first time two nodes are different
 # one of the two must be "query" . remove query and order again.
@@ -25,12 +25,12 @@ for j in tree2.traverse_postorder(internal=False):
         rootat2 = j
         break
 
-assert rootat1.edge_length-rootat2.edge_length < delta
+assert rootat1.edge_length - rootat2.edge_length < delta
 
 # root both trees at the midpoint of the terminal
 # edge
-tree1.reroot(rootat1, rootat1.edge_length/2)
-tree2.reroot(rootat2, rootat2.edge_length/2)
+tree1.reroot(rootat1, rootat1.edge_length / 2)
+tree2.reroot(rootat2, rootat2.edge_length / 2)
 
 # always suppress unifurcations when rooting with treeswift
 tree1.suppress_unifurcations()
@@ -58,11 +58,21 @@ else:
     mrca_list = [next(i.traverse_postorder(internal=False)).label for i in sib.children]
 mrca2 = tree2.mrca(mrca_list)
 
-# the case where the edge is not split by query in tree2
-# or the query is placed closer to root:
-if mrca2.edge_length > sib.edge_length:
-    tree2.reroot(mrca2, sib.edge_length)
+# if sibling mrca2 is the query species, the query is placed
+# on the same edge. In this case, just print the difference
+mrca2_sib = [k for k in mrca2.parent.children if k != mrca2][0]
+if mrca2_sib.is_leaf() and mrca2_sib.label == species:
+    print(abs(mrca2.edge_length - sib.edge_length))
+else:
+    # if query is not placed on the same edge, we reroot at mrca2.
+    # to handle negative edge lengths, which is not taken into account
+    # in treeswift, we change edge_length of mrca2 before we reroot.
+    mrca2.edge_length = 1
+    tree2.reroot(mrca2, 0.5)
     tree2.suppress_unifurcations()
+    mrca2.edge_length = sib.edge_length
+    mrca2_sib = [k for k in mrca2.parent.children if k != mrca2][0]
+    mrca2_sib.edge_length = sib.parent.edge_length
     tot = 0
     for i in q_t2.traverse_ancestors(include_self=False):
         if i.is_root():
@@ -70,13 +80,3 @@ if mrca2.edge_length > sib.edge_length:
         else:
             tot += i.edge_length
     print(tot)
-# edge is broken at the exact same spot
-# (this should rarely happen in leave one out)
-elif mrca2.edge_length == sib.edge_length:
-    print(0)
-# query is placed on the same edge in tree2 but farther away from
-# the root. in this case, we reroot at the parent of mrca2. we don't
-# really need to reroot though. we can simply compute the difference
-else:
-    delta = sib.edge_length - mrca2.edge_length
-    print(delta)
